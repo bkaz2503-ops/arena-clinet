@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  host
+  admin
+}
+
+enum EventStatus {
+  draft
+  lobby
+  question_live
+  answer_reveal
+  leaderboard
+  finished
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  password_hash String
+  role          UserRole @default(host)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  events        Event[]
+
+  @@map("users")
+}
+
+model Event {
+  id                     String      @id @default(cuid())
+  title                  String
+  specialty              String
+  pin                    String
+  status                 EventStatus @default(draft)
+  created_by             String
+  current_question_index Int         @default(0)
+  created_at             DateTime    @default(now())
+  updated_at             DateTime    @updatedAt
+
+  creator                User        @relation(fields: [created_by], references: [id], onDelete: Restrict)
+  questions              Question[]
+  participants           Participant[]
+
+  @@index([pin])
+  @@index([created_by])
+  @@map("events")
+}
+
+model Question {
+  id                 String   @id @default(cuid())
+  event_id           String
+  statement          String
+  explanation        String
+  time_limit_seconds Int
+  order_index        Int
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  event              Event    @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  options            Option[]
+  answers            Answer[]
+
+  @@unique([event_id, order_index])
+  @@index([event_id])
+  @@map("questions")
+}
+
+model Option {
+  id          String   @id @default(cuid())
+  question_id String
+  label       String
+  text        String
+  is_correct  Boolean  @default(false)
+
+  question    Question @relation(fields: [question_id], references: [id], onDelete: Cascade)
+  answers     Answer[]
+
+  @@index([question_id])
+  @@map("options")
+}
+
+model Participant {
+  id           String   @id @default(cuid())
+  event_id     String
+  display_name String
+  total_score  Int      @default(0)
+  joined_at    DateTime @default(now())
+
+  event        Event    @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  answers      Answer[]
+
+  @@unique([event_id, display_name])
+  @@index([event_id])
+  @@map("participants")
+}
+
+model Answer {
+  id               String      @id @default(cuid())
+  participant_id   String
+  question_id      String
+  option_id        String
+  is_correct       Boolean
+  response_time_ms Int
+  score_awarded    Int
+  answered_at      DateTime    @default(now())
+
+  participant      Participant @relation(fields: [participant_id], references: [id], onDelete: Cascade)
+  question         Question    @relation(fields: [question_id], references: [id], onDelete: Cascade)
+  option           Option      @relation(fields: [option_id], references: [id], onDelete: Restrict)
+
+  @@unique([participant_id, question_id])
+  @@index([question_id])
+  @@index([participant_id])
+  @@map("answers")
+}
