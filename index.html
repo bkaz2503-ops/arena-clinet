@@ -28,6 +28,7 @@
 
   <div id="pantalla-juego" class="hidden min-h-screen p-6">
     <div class="max-w-3xl mx-auto">
+
       <div class="flex justify-between items-center mb-6">
         <div>
           <p class="text-sm text-gray-500">PIN del juego</p>
@@ -35,72 +36,80 @@
         </div>
         <div class="text-right">
           <p class="text-sm text-gray-500">Tiempo restante</p>
-          <h2 class="text-2xl font-bold text-red-500">20s</h2>
+          <h2 id="timer" class="text-2xl font-bold text-red-500">20s</h2>
         </div>
       </div>
 
       <div class="bg-white rounded-2xl shadow p-6 mb-6">
         <p class="text-sm text-gray-500 mb-2">Pregunta 1 de 10</p>
-        <h3 class="text-2xl font-bold mb-4">Paciente de 65 años con dolor torácico opresivo de 30 minutos. ¿Cuál es la conducta inicial más adecuada?</h3>
+        <h3 class="text-2xl font-bold mb-4">
+          Paciente de 65 años con dolor torácico opresivo de 30 minutos. ¿Cuál es la conducta inicial más adecuada?
+        </h3>
       </div>
 
       <div class="grid md:grid-cols-2 gap-4">
-        <button onclick="responder('A')" class="bg-red-500 text-white p-5 rounded-2xl text-left font-semibold shadow hover:opacity-90">
-          A. Indicar reposo domiciliario y reevaluar en 24 horas
-        </button>
-
-        <button onclick="responder('B')" class="bg-blue-500 text-white p-5 rounded-2xl text-left font-semibold shadow hover:opacity-90">
-          B. Solicitar ECG y evaluación urgente por probable síndrome coronario agudo
-        </button>
-
-        <button onclick="responder('C')" class="bg-yellow-400 text-gray-900 p-5 rounded-2xl text-left font-semibold shadow hover:opacity-90">
-          C. Prescribir omeprazol por probable reflujo gastroesofágico
-        </button>
-
-        <button onclick="responder('D')" class="bg-green-500 text-white p-5 rounded-2xl text-left font-semibold shadow hover:opacity-90">
-          D. Indicar antibiótico empírico y alta inmediata
-        </button>
+        <button onclick="responder('A')" class="bg-red-500 text-white p-5 rounded-2xl">A</button>
+        <button onclick="responder('B')" class="bg-blue-500 text-white p-5 rounded-2xl">B</button>
+        <button onclick="responder('C')" class="bg-yellow-400 p-5 rounded-2xl">C</button>
+        <button onclick="responder('D')" class="bg-green-500 text-white p-5 rounded-2xl">D</button>
       </div>
 
-      <div id="mensaje" class="hidden mt-6 bg-white rounded-2xl shadow p-4 text-center font-semibold"></div>
+      <div id="mensaje" class="hidden mt-6 text-center font-semibold"></div>
 
-      <div class="mt-6 text-center">
-        <button onclick="volverInicio()" class="text-sm text-gray-600 underline">Salir del juego</button>
-      </div>
     </div>
   </div>
 
   <script>
+    let respondido = false;
+
     function unirse() {
       const pin = document.getElementById('pin').value.trim();
 
       if (!pin) {
-        alert('Ingresa un PIN');
+        alert("Ingresa un PIN");
+        return;
+      }
+
+      if (pin !== "123456") {
+        alert("PIN inválido");
         return;
       }
 
       document.getElementById('pin-mostrado').textContent = pin;
       document.getElementById('pantalla-pin').classList.add('hidden');
       document.getElementById('pantalla-juego').classList.remove('hidden');
-      document.getElementById('mensaje').classList.add('hidden');
-      document.getElementById('mensaje').textContent = '';
+
+      iniciarTimer();
     }
 
     function responder(opcion) {
+      if (respondido) return;
+
+      respondido = true;
+
       const mensaje = document.getElementById('mensaje');
       mensaje.classList.remove('hidden');
 
       if (opcion === 'B') {
-        mensaje.textContent = 'Respuesta enviada: opción B. Buena elección.';
+        mensaje.textContent = "Correcto ✅";
       } else {
-        mensaje.textContent = 'Respuesta enviada: opción ' + opcion + '.';
+        mensaje.textContent = "Respuesta enviada: " + opcion;
       }
     }
 
-    function volverInicio() {
-      document.getElementById('pantalla-juego').classList.add('hidden');
-      document.getElementById('pantalla-pin').classList.remove('hidden');
-      document.getElementById('pin').value = '';
+    function iniciarTimer() {
+      let tiempo = 20;
+      const timer = document.getElementById("timer");
+
+      const intervalo = setInterval(() => {
+        tiempo--;
+        timer.textContent = tiempo + "s";
+
+        if (tiempo <= 0) {
+          clearInterval(intervalo);
+          timer.textContent = "Tiempo terminado";
+        }
+      }, 1000);
     }
   </script>
 
