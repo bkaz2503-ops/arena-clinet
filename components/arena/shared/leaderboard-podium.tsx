@@ -166,7 +166,7 @@ export function LeaderboardPodium({ entries }: LeaderboardPodiumProps) {
   const [first, second, third] = topThree;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 rounded-3xl bg-slate-900 p-6">
       <style>{`
         @keyframes podiumRevealSide {
           from {
