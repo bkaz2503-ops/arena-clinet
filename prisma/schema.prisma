@@ -10,6 +10,8 @@ datasource db {
 enum UserRole {
   host
   admin
+
+  @@map("user_role")
 }
 
 enum EventStatus {
@@ -19,6 +21,8 @@ enum EventStatus {
   answer_reveal
   leaderboard
   finished
+
+  @@map("event_status")
 }
 
 model User {
