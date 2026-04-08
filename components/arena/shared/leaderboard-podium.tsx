@@ -24,29 +24,33 @@ const podiumStyles: Record<
     badge: string;
     score: string;
     avatar: string;
+    name: string;
   }
 > = {
   gold: {
     container:
-      "border-amber-300/40 bg-gradient-to-b from-amber-200/18 via-amber-100/12 to-white/8 ring-2 ring-amber-300/35 shadow-[0_0_60px_rgba(250,204,21,0.22)]",
+      "border-amber-300/40 bg-gradient-to-b from-slate-50 via-white to-amber-50 shadow-[0_0_90px_rgba(250,204,21,0.22)] ring-2 ring-amber-300/30",
     badge:
-      "border border-amber-300/30 bg-amber-300/20 text-amber-100 shadow-[0_0_20px_rgba(250,204,21,0.18)]",
-    score: "text-amber-100",
-    avatar: "ring-amber-300/45"
+      "border border-amber-300/40 bg-amber-100 text-amber-700 shadow-[0_0_20px_rgba(250,204,21,0.18)]",
+    score: "text-amber-600",
+    avatar: "ring-amber-300/60",
+    name: "text-slate-950"
   },
   silver: {
     container:
-      "border-slate-300/18 bg-white/6 shadow-[0_18px_45px_-28px_rgba(148,163,184,0.35)]",
-    badge: "border border-slate-300/18 bg-white/8 text-slate-100",
-    score: "text-slate-100",
-    avatar: "ring-slate-300/30"
+      "border-slate-300/20 bg-gradient-to-b from-slate-800 to-slate-900 shadow-[0_18px_45px_-28px_rgba(148,163,184,0.35)]",
+    badge: "border border-slate-400/25 bg-slate-700 text-slate-100",
+    score: "text-slate-200",
+    avatar: "ring-slate-300/30",
+    name: "text-white"
   },
   bronze: {
     container:
-      "border-orange-300/18 bg-orange-300/8 shadow-[0_18px_45px_-28px_rgba(249,115,22,0.3)]",
-    badge: "border border-orange-300/20 bg-orange-300/12 text-orange-100",
-    score: "text-orange-100",
-    avatar: "ring-orange-300/30"
+      "border-orange-300/20 bg-gradient-to-b from-orange-950/70 to-slate-900 shadow-[0_18px_45px_-28px_rgba(249,115,22,0.3)]",
+    badge: "border border-orange-300/25 bg-orange-400/10 text-orange-100",
+    score: "text-orange-200",
+    avatar: "ring-orange-300/30",
+    name: "text-white"
   }
 };
 
@@ -118,8 +122,8 @@ function PodiumCard({
 
   return (
     <div
-      className={`rounded-[2rem] border p-5 text-white transition-all duration-300 ${style.container} ${
-        emphasized ? "md:px-6 md:py-7" : ""
+      className={`rounded-[2rem] border p-5 transition-all duration-300 ${style.container} ${
+        emphasized ? "md:px-6 md:py-8" : ""
       }`}
       style={{
         animation: emphasized
@@ -133,6 +137,7 @@ function PodiumCard({
         >
           {rank === 1 ? "Ganador" : `Puesto ${rank}`}
         </span>
+
         <div className="mt-4">
           <AvatarBadge
             name={entry.display_name}
@@ -142,13 +147,15 @@ function PodiumCard({
             tone={tone}
           />
         </div>
+
         <p
-          className={`mt-4 font-semibold tracking-tight text-white ${
+          className={`mt-4 font-semibold tracking-tight ${style.name} ${
             emphasized ? "text-3xl sm:text-4xl" : "text-xl"
           }`}
         >
           {entry.display_name}
         </p>
+
         <p
           className={`mt-2 font-semibold tracking-tight ${
             emphasized ? "text-2xl sm:text-3xl" : "text-lg"
@@ -166,7 +173,7 @@ export function LeaderboardPodium({ entries }: LeaderboardPodiumProps) {
   const [first, second, third] = topThree;
 
   return (
-    <div className="space-y-5 rounded-3xl bg-slate-900 p-6">
+    <div className="space-y-6 rounded-[2rem] bg-gradient-to-br from-slate-950 via-[#081633] to-slate-950 p-6 shadow-[0_30px_100px_-30px_rgba(15,23,42,0.95)] ring-1 ring-white/10">
       <style>{`
         @keyframes podiumRevealSide {
           from {
@@ -214,13 +221,17 @@ export function LeaderboardPodium({ entries }: LeaderboardPodiumProps) {
           ) : (
             <div className="hidden md:block" />
           )}
-          <PodiumCard
-            entry={first}
-            rank={1}
-            tone="gold"
-            emphasized
-            delayMs={180}
-          />
+
+          <div className="md:-translate-y-2">
+            <PodiumCard
+              entry={first}
+              rank={1}
+              tone="gold"
+              emphasized
+              delayMs={180}
+            />
+          </div>
+
           {third ? (
             <PodiumCard entry={third} rank={3} tone="bronze" delayMs={120} />
           ) : (
@@ -239,7 +250,7 @@ export function LeaderboardPodium({ entries }: LeaderboardPodiumProps) {
             key={`${entry.display_name}-${index}`}
             className={`flex items-center justify-between gap-4 rounded-2xl border px-4 py-4 text-sm transition-all duration-200 hover:-translate-y-0.5 ${
               index === 0
-                ? "border-amber-300/25 bg-amber-300/10 shadow-[0_18px_40px_-30px_rgba(250,204,21,0.3)]"
+                ? "border-amber-300/35 bg-gradient-to-r from-amber-400/12 via-amber-300/10 to-transparent shadow-[0_18px_40px_-30px_rgba(250,204,21,0.35)]"
                 : "border-white/10 bg-white/5 hover:border-white/15 hover:bg-white/7"
             }`}
           >
@@ -264,15 +275,16 @@ export function LeaderboardPodium({ entries }: LeaderboardPodiumProps) {
                   {index + 1}. {entry.display_name}
                 </p>
                 {index === 0 ? (
-                  <p className="text-xs font-medium text-amber-100">
+                  <p className="text-xs font-medium text-amber-200">
                     En primer lugar
                   </p>
                 ) : null}
               </div>
             </div>
+
             <span
               className={`text-base font-semibold ${
-                index === 0 ? "text-amber-100" : "text-slate-100"
+                index === 0 ? "text-amber-200" : "text-slate-100"
               }`}
             >
               {entry.total_score}
