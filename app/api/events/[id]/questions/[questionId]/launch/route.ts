@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { getHostSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { scheduleQuestionAutoClose } from "@/lib/question-timer";
 import { emitRealtimeEvent } from "@/lib/socket";
 import { getEventTransitionError } from "@/lib/state-machine";
 
@@ -9,11 +11,26 @@ type RouteContext = {
 };
 
 export async function POST(_: Request, context: RouteContext) {
+  const session = await getHostSession();
+
+  if (!session) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Debes iniciar sesion para lanzar preguntas."
+      },
+      { status: 401 }
+    );
+  }
+
   const { id, questionId } = await context.params;
   console.log("[event.launch] attempt", { event_id: id, question_id: questionId });
 
-  const event = await db.event.findUnique({
-    where: { id },
+  const event = await db.event.findFirst({
+    where: {
+      id,
+      created_by: session.sub
+    },
     select: {
       id: true,
       pin: true,
@@ -37,7 +54,8 @@ export async function POST(_: Request, context: RouteContext) {
     select: {
       id: true,
       event_id: true,
-      order_index: true
+      order_index: true,
+      time_limit_seconds: true
     }
   });
 
@@ -80,18 +98,32 @@ export async function POST(_: Request, context: RouteContext) {
     );
   }
 
+  const questionStartedAt = new Date();
+  const questionClosesAt = new Date(
+    questionStartedAt.getTime() + question.time_limit_seconds * 1000
+  );
+
   const updatedEvent = await db.event.update({
     where: { id: event.id },
     data: {
       status: "question_live",
-      current_question_index: question.order_index
+      current_question_index: question.order_index,
+      question_started_at: questionStartedAt,
+      question_closes_at: questionClosesAt
     },
     select: {
       id: true,
       pin: true,
       status: true,
-      current_question_index: true
+      current_question_index: true,
+      question_started_at: true,
+      question_closes_at: true
     }
+  });
+
+  scheduleQuestionAutoClose({
+    eventId: updatedEvent.id,
+    closesAt: questionClosesAt
   });
 
   console.log("[event.launch] success", {

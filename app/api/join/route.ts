@@ -1,7 +1,9 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
+import { assignAvatarId } from "@/lib/avatars";
 import { db } from "@/lib/db";
+import { emitRealtimeEvent } from "@/lib/socket";
 import {
   formatZodError,
   isZodValidationError,
@@ -45,17 +47,40 @@ export async function POST(request: Request) {
       );
     }
 
+    const existingParticipants = await db.participant.findMany({
+      where: {
+        event_id: event.id
+      },
+      select: {
+        avatar_id: true
+      }
+    });
+
+    const avatarId = assignAvatarId(
+      existingParticipants.map((participant) => participant.avatar_id)
+    );
+
     const participant = await db.participant.create({
       data: {
         event_id: event.id,
-        display_name: payload.display_name
+        display_name: payload.display_name,
+        avatar_id: avatarId
       },
       select: {
         id: true,
         display_name: true,
+        avatar_id: true,
         total_score: true,
         joined_at: true
       }
+    });
+
+    emitRealtimeEvent({
+      type: "participant:joined",
+      pin: event.pin,
+      eventId: event.id,
+      participantId: participant.id,
+      timestamp: Date.now()
     });
 
     return NextResponse.json(

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { normalizePin } from "@/lib/pin";
+import { closeQuestionIfExpired } from "@/lib/question-timer";
 
 type RouteContext = {
   params: Promise<{ pin: string }>;
@@ -11,7 +12,7 @@ export async function GET(_: Request, context: RouteContext) {
   const { pin } = await context.params;
   const normalizedPin = normalizePin(pin);
 
-  const event = await db.event.findFirst({
+  let event = await db.event.findFirst({
     where: {
       pin: normalizedPin
     },
@@ -34,15 +35,27 @@ export async function GET(_: Request, context: RouteContext) {
     );
   }
 
+  const autoClosedEvent = await closeQuestionIfExpired(event.id);
+
+  if (autoClosedEvent) {
+    event = {
+      ...event,
+      status: autoClosedEvent.status,
+      current_question_index: autoClosedEvent.current_question_index
+    };
+  }
+
   const participants = await db.participant.findMany({
     where: {
       event_id: event.id
     },
     orderBy: [{ total_score: "desc" }, { joined_at: "asc" }],
-    take: 10,
     select: {
+      id: true,
       display_name: true,
-      total_score: true
+      avatar_id: true,
+      total_score: true,
+      joined_at: true
     }
   });
 
@@ -100,7 +113,8 @@ export async function GET(_: Request, context: RouteContext) {
     ok: true,
     item: {
       event,
-      leaderboard: participants,
+      leaderboard: participants.slice(0, 10),
+      participants,
       current_question: publicCurrentQuestion
     }
   });

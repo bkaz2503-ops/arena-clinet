@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getHostSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   createQuestionSchema,
@@ -11,9 +12,12 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-async function ensureEventExists(eventId: string) {
-  const event = await db.event.findUnique({
-    where: { id: eventId },
+async function getOwnedEvent(eventId: string, userId: string) {
+  const event = await db.event.findFirst({
+    where: {
+      id: eventId,
+      created_by: userId
+    },
     select: {
       id: true,
       title: true,
@@ -25,8 +29,20 @@ async function ensureEventExists(eventId: string) {
 }
 
 export async function GET(_: Request, context: RouteContext) {
+  const session = await getHostSession();
+
+  if (!session) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Debes iniciar sesion para ver estas preguntas."
+      },
+      { status: 401 }
+    );
+  }
+
   const { id } = await context.params;
-  const event = await ensureEventExists(id);
+  const event = await getOwnedEvent(id, session.sub);
 
   if (!event) {
     return NextResponse.json(
@@ -74,10 +90,22 @@ export async function GET(_: Request, context: RouteContext) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  const session = await getHostSession();
+
+  if (!session) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Debes iniciar sesion para crear preguntas."
+      },
+      { status: 401 }
+    );
+  }
+
   const { id } = await context.params;
 
   try {
-    const event = await ensureEventExists(id);
+    const event = await getOwnedEvent(id, session.sub);
 
     if (!event) {
       return NextResponse.json(

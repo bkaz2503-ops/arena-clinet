@@ -24,6 +24,10 @@ enum EventStatus {
 model User {
   id            String   @id @default(cuid())
   name          String
+  profession    String
+  institution   String
+  country       String
+  whatsapp      String?
   email         String   @unique
   password_hash String
   role          UserRole @default(host)
@@ -43,6 +47,8 @@ model Event {
   status                 EventStatus @default(draft)
   created_by             String
   current_question_index Int         @default(0)
+  question_started_at    DateTime?
+  question_closes_at     DateTime?
   created_at             DateTime    @default(now())
   updated_at             DateTime    @updatedAt
 
@@ -92,6 +98,7 @@ model Participant {
   id           String   @id @default(cuid())
   event_id     String
   display_name String
+  avatar_id    String?
   total_score  Int      @default(0)
   joined_at    DateTime @default(now())
 

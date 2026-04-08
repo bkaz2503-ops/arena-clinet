@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import { getEventStatusLabel, type EventStatus } from "@/lib/state-machine";
 import { PageShell } from "@/components/ui/page-shell";
 import { Panel } from "@/components/ui/panel";
-import { StatGrid } from "@/components/ui/stat-grid";
 
 type EventItem = {
   id: string;
@@ -159,67 +158,133 @@ export function HostControlClient({ eventId }: HostControlClientProps) {
     }
   }
 
+  const statusLabel = event
+    ? getEventStatusLabel(event.status as EventStatus)
+    : "Cargando";
+
+  const nextStepMessage =
+    event?.status === "draft"
+      ? "Puedes iniciar el evento cuando ya tengas participantes conectados."
+      : event?.status === "lobby"
+        ? `Lanza la pregunta #${nextQuestionNumber} para comenzar la ronda.`
+        : event?.status === "question_live"
+          ? "La pregunta esta en curso. Cuando termine, revela la respuesta o muestra resultados."
+          : event?.status === "answer_reveal"
+            ? "La respuesta ya esta visible. Ahora puedes mostrar resultados o seguir con la siguiente pregunta."
+            : event?.status === "leaderboard"
+              ? `Muestra la siguiente pregunta (#${nextQuestionNumber}) o finaliza el evento.`
+              : "El evento ya finalizo. Puedes dejar esta pantalla abierta como referencia final.";
+
   return (
     <PageShell
-      title={`Control del evento ${eventId}`}
-      description="Control minimo del host para cambiar el estado del evento y lanzar preguntas."
+      title={event?.title ?? `Control del evento ${eventId}`}
+      description="Controla el ritmo del evento, lanza preguntas y guia la sesion en vivo."
     >
-      <StatGrid
-        items={[
-          {
-            label: "Estado",
-            value: event ? getEventStatusLabel(event.status as EventStatus) : "-"
-          },
-          { label: "PIN", value: event?.pin ?? "-" },
-          {
-            label: "Pregunta actual",
-            value: String((event?.current_question_index ?? 0) + 1)
-          },
-          {
-            label: "Seleccionada",
-            value: selectedQuestion
-              ? String(selectedQuestion.order_index + 1)
-              : "-"
-          }
-        ]}
-      />
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <Panel>
-          {loading ? (
-            <p className="text-sm text-slate-600">Cargando evento...</p>
-          ) : (
+      <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+        <div className="space-y-6">
+          <Panel className="border-arena-100 bg-gradient-to-br from-white to-sky-50/70">
+            {loading ? (
+              <p className="text-sm text-slate-600">Cargando evento...</p>
+            ) : (
+              <div className="space-y-6">
+                <div className="flex flex-wrap items-center gap-4 text-sm font-medium">
+                  <Link href="/host/dashboard" className="text-arena-700 hover:text-arena-800">
+                    ← Volver al dashboard
+                  </Link>
+                  <Link
+                    href={`/host/event/${eventId}/questions`}
+                    className="text-slate-600 hover:text-slate-900"
+                  >
+                    Administrar preguntas
+                  </Link>
+                </div>
+
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="space-y-3">
+                    <div className="inline-flex rounded-full bg-arena-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-arena-700">
+                      Control del evento
+                    </div>
+                    <div>
+                      <h2 className="text-3xl font-semibold tracking-tight text-slate-950">
+                        {event?.title}
+                      </h2>
+                      <p className="mt-2 text-sm text-slate-600">
+                        {event?.specialty}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2 lg:w-[22rem]">
+                    <div className="rounded-2xl border border-white/80 bg-white/90 p-4 shadow-sm">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        PIN
+                      </p>
+                      <p className="mt-2 text-2xl font-semibold tracking-[0.18em] text-slate-950">
+                        {event?.pin ?? "-"}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-white/80 bg-white/90 p-4 shadow-sm">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        Estado
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-arena-700">
+                        {statusLabel}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Pregunta activa
+                    </p>
+                    <p className="mt-3 text-lg font-semibold text-slate-950">
+                      {currentQuestion
+                        ? `#${currentQuestion.order_index + 1}`
+                        : "Todavia no hay una pregunta en curso"}
+                    </p>
+                    {currentQuestion ? (
+                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                        {currentQuestion.statement}
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                        Elige una pregunta y sigue el flujo del evento para lanzarla.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="rounded-2xl border border-arena-100 bg-arena-50 p-5">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-arena-700">
+                      Paso actual
+                    </p>
+                    <p className="mt-3 text-lg font-semibold text-slate-950">
+                      {event?.status === "draft" && "Puedes iniciar el evento"}
+                      {event?.status === "lobby" && "Lanza la siguiente pregunta"}
+                      {event?.status === "question_live" && "Espera y luego revela la respuesta"}
+                      {event?.status === "answer_reveal" && "Muestra resultados o sigue"}
+                      {event?.status === "leaderboard" && "Continua con la siguiente ronda"}
+                      {event?.status === "finished" && "Evento finalizado"}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-slate-700">
+                      {nextStepMessage}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Panel>
+
+          <Panel>
             <div className="space-y-5">
               <div>
-                <h2 className="text-xl font-semibold text-slate-900">
-                  {event?.title}
-                </h2>
+                <h3 className="text-xl font-semibold text-slate-950">
+                  Acciones del host
+                </h3>
                 <p className="mt-1 text-sm text-slate-600">
-                  {event?.specialty} - PIN {event?.pin}
+                  Sigue el flujo del evento. Los botones se activan solo cuando corresponde.
                 </p>
-                <p className="mt-2 text-sm text-slate-500">
-                  Estado actual:{" "}
-                  {event ? getEventStatusLabel(event.status as EventStatus) : "-"}
-                </p>
-                {currentQuestion ? (
-                  <p className="mt-2 text-sm text-slate-600">
-                    Pregunta activa: #{currentQuestion.order_index + 1}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                {event?.status === "draft" &&
-                  "Paso siguiente: inicia el evento cuando ya tengas participantes conectados."}
-                {event?.status === "lobby" &&
-                  `Paso siguiente: lanza la pregunta #${nextQuestionNumber}.`}
-                {event?.status === "question_live" &&
-                  "Paso siguiente: cuando termine la ronda, revela la respuesta o muestra resultados."}
-                {event?.status === "answer_reveal" &&
-                  "Paso siguiente: muestra resultados o lanza la siguiente pregunta."}
-                {event?.status === "leaderboard" &&
-                  `Paso siguiente: lanza la pregunta #${nextQuestionNumber} o finaliza el evento.`}
-                {event?.status === "finished" &&
-                  "El evento ya termino. Puedes dejar esta pantalla abierta para revisar el estado final."}
               </div>
 
               <div className="space-y-2">
@@ -229,7 +294,7 @@ export function HostControlClient({ eventId }: HostControlClientProps) {
                 <select
                   value={selectedQuestionId}
                   onChange={(event) => setSelectedQuestionId(event.target.value)}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-arena-400 focus:ring-4 focus:ring-arena-100"
                 >
                   <option value="">Selecciona una pregunta</option>
                   {questions.map((question) => (
@@ -240,12 +305,12 @@ export function HostControlClient({ eventId }: HostControlClientProps) {
                 </select>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 <button
                   type="button"
                   onClick={() => void runAction("start")}
                   disabled={actionLoading !== null || !canStart}
-                  className="rounded-xl bg-arena-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                  className="rounded-2xl bg-arena-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-arena-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Iniciar evento
                 </button>
@@ -253,7 +318,7 @@ export function HostControlClient({ eventId }: HostControlClientProps) {
                   type="button"
                   onClick={() => void runAction("launch")}
                   disabled={actionLoading !== null || !canLaunch}
-                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 disabled:opacity-60"
+                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-arena-200 hover:text-arena-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Lanzar pregunta
                 </button>
@@ -261,7 +326,7 @@ export function HostControlClient({ eventId }: HostControlClientProps) {
                   type="button"
                   onClick={() => void runAction("reveal")}
                   disabled={actionLoading !== null || !canReveal}
-                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 disabled:opacity-60"
+                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-arena-200 hover:text-arena-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Revelar respuesta
                 </button>
@@ -269,7 +334,7 @@ export function HostControlClient({ eventId }: HostControlClientProps) {
                   type="button"
                   onClick={() => void runAction("leaderboard")}
                   disabled={actionLoading !== null || !canShowLeaderboard}
-                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 disabled:opacity-60"
+                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-arena-200 hover:text-arena-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Mostrar resultados
                 </button>
@@ -277,35 +342,76 @@ export function HostControlClient({ eventId }: HostControlClientProps) {
                   type="button"
                   onClick={() => void runAction("finish")}
                   disabled={actionLoading !== null || !canFinish}
-                  className="rounded-xl border border-red-300 px-4 py-3 text-sm font-semibold text-red-700 disabled:opacity-60 sm:col-span-2"
+                  className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2 xl:col-span-1"
                 >
                   Finalizar evento
                 </button>
               </div>
 
-              {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
-              {error ? <p className="text-sm text-red-600">{error}</p> : null}
-            </div>
-          )}
-        </Panel>
+              {message ? (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  {message}
+                </div>
+              ) : null}
 
-        <Panel>
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-slate-900">Navegacion</h2>
-            <Link
-              href={`/host/event/${eventId}/questions`}
-              className="block rounded-xl bg-arena-500 px-4 py-3 text-center text-sm font-semibold text-white"
-            >
-              Administrar preguntas
-            </Link>
-            <Link
-              href={`/live/${event?.pin ?? ""}`}
-              className="block rounded-xl border border-slate-300 px-4 py-3 text-center text-sm font-semibold text-slate-700"
-            >
-              Abrir pantalla publica
-            </Link>
-          </div>
-        </Panel>
+              {error ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {error}
+                </div>
+              ) : null}
+            </div>
+          </Panel>
+        </div>
+
+        <div className="space-y-6">
+          <Panel>
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-slate-950">
+                Atajos utiles
+              </h3>
+              <Link
+                href={`/host/event/${eventId}/questions`}
+                className="block rounded-2xl bg-arena-500 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-arena-700"
+              >
+                Administrar preguntas
+              </Link>
+              <Link
+                href={`/live/${event?.pin ?? ""}`}
+                className="block rounded-2xl border border-slate-300 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-700 transition hover:border-arena-200 hover:text-arena-700"
+              >
+                Abrir pantalla publica
+              </Link>
+            </div>
+          </Panel>
+
+          <Panel>
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-slate-950">
+                Resumen rapido
+              </h3>
+              <div className="space-y-3 text-sm text-slate-600">
+                <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                  Estado actual:{" "}
+                  <span className="font-semibold text-slate-900">{statusLabel}</span>
+                </div>
+                <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                  Pregunta seleccionada:{" "}
+                  <span className="font-semibold text-slate-900">
+                    {selectedQuestion
+                      ? `#${selectedQuestion.order_index + 1}`
+                      : "Ninguna"}
+                  </span>
+                </div>
+                <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                  Siguiente pregunta esperada:{" "}
+                  <span className="font-semibold text-slate-900">
+                    #{Math.max(nextQuestionNumber, 1)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Panel>
+        </div>
       </div>
     </PageShell>
   );

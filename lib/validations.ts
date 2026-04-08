@@ -7,6 +7,21 @@ export const loginSchema = z.object({
   password: z.string().min(6)
 });
 
+export const registerHostSchema = z.object({
+  name: z.string().trim().min(3).max(120),
+  profession: z.string().trim().min(2).max(120),
+  institution: z.string().trim().min(2).max(160),
+  country: z.string().trim().min(2).max(80),
+  email: z.string().trim().email(),
+  whatsapp: z
+    .string()
+    .trim()
+    .max(30)
+    .optional()
+    .transform((value) => value || undefined),
+  password: z.string().min(8).max(72)
+});
+
 export const createEventSchema = z.object({
   title: z.string().min(3).max(120),
   specialty: z.string().min(2).max(80)

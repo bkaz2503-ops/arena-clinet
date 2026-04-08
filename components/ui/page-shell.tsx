@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ReactNode } from "react";
 import clsx from "clsx";
 
@@ -23,9 +24,12 @@ export function PageShell({
         )}
       >
         <header className="space-y-3">
-          <span className="inline-flex rounded-full bg-arena-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-arena-700">
+          <Link
+            href="/"
+            className="inline-flex rounded-full bg-arena-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-arena-700"
+          >
             Arena-CliNet
-          </span>
+          </Link>
           <div className="space-y-2">
             <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
               {title}

@@ -1,8 +1,0 @@
-node_modules
-.next
-.env
-*.log
-.prisma-*
-.manual-*
-.server*
-.sse*

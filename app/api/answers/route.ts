@@ -10,14 +10,35 @@ import {
   isZodValidationError
 } from "@/lib/validations";
 
-class ApiError extends Error {
+type RejectedResult = {
+  kind: "rejected";
+  message: string;
   status: number;
+};
 
-  constructor(message: string, status: number) {
-    super(message);
-    this.status = status;
-  }
-}
+type ExpiredResult = {
+  kind: "expired";
+  message: string;
+  status: number;
+  didClose: boolean;
+  pin: string;
+  event_id: string;
+  question_id: string;
+  current_question_index: number;
+};
+
+type SuccessResult = {
+  kind: "success";
+  pin: string;
+  event_id: string;
+  question_id: string;
+  participant_id: string;
+  is_correct: boolean;
+  score_awarded: number;
+  total_score: number;
+};
+
+type AnswerResult = RejectedResult | ExpiredResult | SuccessResult;
 
 export async function POST(request: Request) {
   try {
@@ -31,7 +52,7 @@ export async function POST(request: Request) {
     });
 
     const result = await db.$transaction(
-      async (tx) => {
+      async (tx): Promise<AnswerResult> => {
         const participant = await tx.participant.findUnique({
           where: {
             id: payload.participant_id
@@ -43,7 +64,11 @@ export async function POST(request: Request) {
         });
 
         if (!participant) {
-          throw new ApiError("No encontramos al participante.", 404);
+          return {
+            kind: "rejected",
+            message: "No encontramos al participante.",
+            status: 404
+          };
         }
 
         const question = await tx.question.findUnique({
@@ -59,11 +84,19 @@ export async function POST(request: Request) {
         });
 
         if (!question) {
-          throw new ApiError("No encontramos esa pregunta.", 404);
+          return {
+            kind: "rejected",
+            message: "No encontramos esa pregunta.",
+            status: 404
+          };
         }
 
         if (participant.event_id !== question.event_id) {
-          throw new ApiError("El participante no pertenece a este evento.", 400);
+          return {
+            kind: "rejected",
+            message: "El participante no pertenece a este evento.",
+            status: 400
+          };
         }
 
         const event = await tx.event.findUnique({
@@ -74,24 +107,80 @@ export async function POST(request: Request) {
             id: true,
             pin: true,
             status: true,
-            current_question_index: true
+            current_question_index: true,
+            question_closes_at: true
           }
         });
 
         if (!event) {
-          throw new ApiError("No encontramos ese evento.", 404);
+          return {
+            kind: "rejected",
+            message: "No encontramos ese evento.",
+            status: 404
+          };
         }
 
         if (event.status === "finished") {
-          throw new ApiError("El evento ya finalizo.", 400);
+          return {
+            kind: "rejected",
+            message: "El evento ya finalizo.",
+            status: 400
+          };
         }
 
         if (event.status !== "question_live") {
-          throw new ApiError("No puedes responder en este momento.", 400);
+          return {
+            kind: "rejected",
+            message: "No puedes responder en este momento.",
+            status: 400
+          };
         }
 
         if (question.order_index !== event.current_question_index) {
-          throw new ApiError("La pregunta ya no esta activa.", 400);
+          return {
+            kind: "rejected",
+            message: "La pregunta ya no esta activa.",
+            status: 400
+          };
+        }
+
+        const now = new Date();
+        const questionAlreadyClosed =
+          !event.question_closes_at || event.question_closes_at <= now;
+
+        if (questionAlreadyClosed) {
+          const updated = await tx.event.updateMany({
+            where: {
+              id: event.id,
+              status: "question_live",
+              OR: [
+                {
+                  question_closes_at: null
+                },
+                {
+                  question_closes_at: {
+                    lte: now
+                  }
+                }
+              ]
+            },
+            data: {
+              status: "answer_reveal",
+              question_started_at: null,
+              question_closes_at: null
+            }
+          });
+
+          return {
+            kind: "expired",
+            message: "Se acabo el tiempo para responder.",
+            status: 400,
+            didClose: updated.count > 0,
+            pin: event.pin,
+            event_id: event.id,
+            question_id: question.id,
+            current_question_index: event.current_question_index
+          };
         }
 
         const option = await tx.option.findUnique({
@@ -106,16 +195,21 @@ export async function POST(request: Request) {
         });
 
         if (!option || option.question_id !== question.id) {
-          throw new ApiError(
-            "La opcion elegida no corresponde a esta pregunta.",
-            400
-          );
+          return {
+            kind: "rejected",
+            message: "La opcion elegida no corresponde a esta pregunta.",
+            status: 400
+          };
         }
 
         const timeLimitMs = question.time_limit_seconds * 1000;
 
         if (payload.response_time_ms > timeLimitMs) {
-          throw new ApiError("Se acabo el tiempo para responder.", 400);
+          return {
+            kind: "rejected",
+            message: "Se acabo el tiempo para responder.",
+            status: 400
+          };
         }
 
         const safeResponseTimeMs = Math.max(
@@ -155,6 +249,7 @@ export async function POST(request: Request) {
         });
 
         return {
+          kind: "success",
           pin: event.pin,
           event_id: event.id,
           question_id: question.id,
@@ -168,6 +263,48 @@ export async function POST(request: Request) {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable
       }
     );
+
+    if (result.kind === "rejected") {
+      console.log("[answers] submit_rejected", {
+        message: result.message,
+        status: result.status
+      });
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message: result.message
+        },
+        { status: result.status }
+      );
+    }
+
+    if (result.kind === "expired") {
+      if (result.didClose) {
+        emitRealtimeEvent({
+          type: "answer:revealed",
+          pin: result.pin,
+          eventId: result.event_id,
+          status: "answer_reveal",
+          currentQuestionIndex: result.current_question_index,
+          questionId: result.question_id,
+          timestamp: Date.now()
+        });
+      }
+
+      console.log("[answers] submit_expired", {
+        question_id: result.question_id,
+        event_id: result.event_id
+      });
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message: result.message
+        },
+        { status: result.status }
+      );
+    }
 
     console.log("[answers] submit_success", {
       participant_id: payload.participant_id,
@@ -186,16 +323,14 @@ export async function POST(request: Request) {
       timestamp: Date.now()
     });
 
-    const responseItem = {
-      is_correct: result.is_correct,
-      score_awarded: result.score_awarded,
-      total_score: result.total_score
-    };
-
     return NextResponse.json(
       {
         ok: true,
-        item: responseItem
+        item: {
+          is_correct: result.is_correct,
+          score_awarded: result.score_awarded,
+          total_score: result.total_score
+        }
       },
       { status: 201 }
     );
@@ -208,21 +343,6 @@ export async function POST(request: Request) {
           issues: formatZodError(error)
         },
         { status: 400 }
-      );
-    }
-
-    if (error instanceof ApiError) {
-      console.log("[answers] submit_rejected", {
-        message: error.message,
-        status: error.status
-      });
-
-      return NextResponse.json(
-        {
-          ok: false,
-          message: error.message
-        },
-        { status: error.status }
       );
     }
 

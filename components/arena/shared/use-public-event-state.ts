@@ -62,6 +62,7 @@ export function usePublicEventState<TState>({
     source.addEventListener("answer:revealed", refetch);
     source.addEventListener("leaderboard:updated", refetch);
     source.addEventListener("event:finished", refetch);
+    source.addEventListener("participant:joined", refetch);
     source.addEventListener("answer:submitted", refetch);
 
     source.onerror = () => {

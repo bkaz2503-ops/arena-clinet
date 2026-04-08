@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { getHostSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { clearQuestionAutoClose } from "@/lib/question-timer";
 import { emitRealtimeEvent } from "@/lib/socket";
 import { getEventTransitionError } from "@/lib/state-machine";
 
@@ -9,10 +11,25 @@ type RouteContext = {
 };
 
 export async function POST(_: Request, context: RouteContext) {
+  const session = await getHostSession();
+
+  if (!session) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Debes iniciar sesion para finalizar este evento."
+      },
+      { status: 401 }
+    );
+  }
+
   const { id } = await context.params;
 
-  const event = await db.event.findUnique({
-    where: { id },
+  const event = await db.event.findFirst({
+    where: {
+      id,
+      created_by: session.sub
+    },
     select: {
       id: true,
       pin: true,
@@ -46,7 +63,9 @@ export async function POST(_: Request, context: RouteContext) {
   const updatedEvent = await db.event.update({
     where: { id: event.id },
     data: {
-      status: "finished"
+      status: "finished",
+      question_started_at: null,
+      question_closes_at: null
     },
     select: {
       id: true,
@@ -55,6 +74,8 @@ export async function POST(_: Request, context: RouteContext) {
       current_question_index: true
     }
   });
+
+  clearQuestionAutoClose(updatedEvent.id);
 
   emitRealtimeEvent({
     type: "event:finished",

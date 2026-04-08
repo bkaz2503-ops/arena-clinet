@@ -52,57 +52,98 @@ export function NewEventClient() {
   return (
     <PageShell
       title="Crear evento"
-      description="Formulario mínimo para crear un evento y obtener su PIN."
+      description="Define el titulo y la especialidad para dejar listo el nuevo evento y obtener su PIN."
       compact
     >
-      <Panel>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700" htmlFor="title">
-              Título
-            </label>
-            <input
-              id="title"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700" htmlFor="specialty">
-              Especialidad
-            </label>
-            <input
-              id="specialty"
-              value={specialty}
-              onChange={(event) => setSpecialty(event.target.value)}
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-            />
-          </div>
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-xl bg-arena-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
-          >
-            {submitting ? "Creando..." : "Guardar borrador"}
-          </button>
-        </form>
-
-        {createdEvent ? (
-          <div className="mt-6 rounded-2xl border border-arena-100 bg-arena-50 p-4">
-            <p className="text-sm font-medium text-slate-700">Evento creado</p>
-            <p className="mt-2 text-2xl font-semibold tracking-[0.2em] text-arena-700">
-              {createdEvent.pin}
-            </p>
+      <Panel className="border-arena-100 bg-gradient-to-br from-white to-sky-50/70">
+        <div className="space-y-6">
+          <div className="space-y-3">
             <Link
-              href={`/host/event/${createdEvent.id}`}
-              className="mt-4 inline-flex rounded-xl bg-arena-500 px-4 py-3 text-sm font-semibold text-white"
+              href="/host/dashboard"
+              className="inline-flex text-sm font-medium text-arena-700 hover:text-arena-800"
             >
-              Ir al control del evento
+              ← Volver al dashboard
             </Link>
+
+            <div className="space-y-2">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-arena-700">
+                Nuevo evento
+              </p>
+              <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
+                Crea el evento y obten su PIN en segundos
+              </h2>
+              <p className="text-sm leading-6 text-slate-600">
+                Completa estos datos basicos para generar el borrador del evento
+                y seguir luego con las preguntas.
+              </p>
+            </div>
           </div>
-        ) : null}
+
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700" htmlFor="title">
+                Titulo del evento
+              </label>
+              <input
+                id="title"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Ej. Simposio de cardiologia clinica"
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-arena-400 focus:ring-4 focus:ring-arena-100"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label
+                className="text-sm font-medium text-slate-700"
+                htmlFor="specialty"
+              >
+                Especialidad
+              </label>
+              <input
+                id="specialty"
+                value={specialty}
+                onChange={(event) => setSpecialty(event.target.value)}
+                placeholder="Ej. Cardiologia"
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-arena-400 focus:ring-4 focus:ring-arena-100"
+              />
+            </div>
+
+            {error ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full rounded-2xl bg-arena-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-arena-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {submitting ? "Creando..." : "Crear evento"}
+            </button>
+          </form>
+
+          {createdEvent ? (
+            <div className="rounded-3xl border border-arena-200 bg-white p-5 shadow-sm">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-arena-700">
+                Evento creado
+              </p>
+              <p className="mt-3 text-sm text-slate-600">
+                Ya puedes continuar con la configuracion del evento.
+              </p>
+              <p className="mt-4 text-3xl font-semibold tracking-[0.2em] text-slate-950">
+                {createdEvent.pin}
+              </p>
+              <Link
+                href={`/host/event/${createdEvent.id}`}
+                className="mt-5 inline-flex rounded-2xl bg-arena-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-arena-700"
+              >
+                Ir al control del evento
+              </Link>
+            </div>
+          ) : null}
+        </div>
       </Panel>
     </PageShell>
   );

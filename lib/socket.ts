@@ -6,6 +6,7 @@ export type RealtimeEventName =
   | "answer:revealed"
   | "leaderboard:updated"
   | "event:finished"
+  | "participant:joined"
   | "answer:submitted";
 
 export type RealtimePayload = {

@@ -47,73 +47,96 @@ export function HostDashboardClient() {
 
   return (
     <PageShell
-      title="Dashboard de eventos"
-      description="Listado simple de eventos del expositor para probar el flujo del MVP."
+      title="Tus eventos"
+      description="Crea, revisa y abre el control de cada evento desde un solo lugar."
     >
-      <Panel>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-900">
-              Eventos creados
-            </h2>
-            <p className="text-sm text-slate-600">
-              Consulta en vivo desde el backend actual.
-            </p>
+      <Panel className="border-arena-100 bg-gradient-to-br from-white to-sky-50/70">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-3">
+            <Link href="/" className="inline-flex text-sm font-medium text-arena-700 hover:text-arena-800">
+              ← Volver al inicio
+            </Link>
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-arena-700">
+                Panel del expositor
+              </p>
+              <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+                Tus eventos
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Abre un evento existente o crea uno nuevo para empezar una sesion.
+              </p>
+            </div>
           </div>
           <Link
             href="/host/event/new"
-            className="rounded-xl bg-arena-500 px-4 py-3 text-center text-sm font-semibold text-white"
+            className="inline-flex items-center justify-center rounded-2xl bg-arena-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-arena-700"
           >
             Crear evento
           </Link>
         </div>
-
-        <div className="mt-6 overflow-x-auto">
-          {loading ? (
-            <p className="text-sm text-slate-600">Cargando eventos...</p>
-          ) : error ? (
-            <p className="text-sm text-red-600">{error}</p>
-          ) : events.length === 0 ? (
-            <p className="text-sm text-slate-600">Todavia no hay eventos.</p>
-          ) : (
-            <table className="min-w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-slate-500">
-                  <th className="px-3 py-3 font-medium">Titulo</th>
-                  <th className="px-3 py-3 font-medium">Especialidad</th>
-                  <th className="px-3 py-3 font-medium">PIN</th>
-                  <th className="px-3 py-3 font-medium">Estado</th>
-                  <th className="px-3 py-3 font-medium">Accion</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((event) => (
-                  <tr key={event.id} className="border-b border-slate-100">
-                    <td className="px-3 py-3 text-slate-900">{event.title}</td>
-                    <td className="px-3 py-3 text-slate-600">
-                      {event.specialty}
-                    </td>
-                    <td className="px-3 py-3 font-mono text-slate-900">
-                      {event.pin}
-                    </td>
-                    <td className="px-3 py-3 text-slate-600">
-                      {getEventStatusLabel(event.status as EventStatus)}
-                    </td>
-                    <td className="px-3 py-3">
-                      <Link
-                        href={`/host/event/${event.id}`}
-                        className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700"
-                      >
-                        Abrir control
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
       </Panel>
+
+      <div className="grid gap-4">
+        {loading ? (
+          <Panel>
+            <p className="text-sm text-slate-600">Cargando eventos...</p>
+          </Panel>
+        ) : error ? (
+          <Panel>
+            <p className="text-sm text-red-600">{error}</p>
+          </Panel>
+        ) : events.length === 0 ? (
+          <Panel>
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-slate-950">
+                Todavia no hay eventos
+              </h3>
+              <p className="text-sm text-slate-600">
+                Crea tu primer evento para empezar a probar el flujo del host.
+              </p>
+            </div>
+          </Panel>
+        ) : (
+          events.map((event) => (
+            <Panel key={event.id} className="border-slate-200 bg-white">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h3 className="text-xl font-semibold text-slate-950">
+                      {event.title}
+                    </h3>
+                    <span className="rounded-full bg-arena-50 px-3 py-1 text-xs font-semibold text-arena-700">
+                      {getEventStatusLabel(event.status as EventStatus)}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-4 text-sm text-slate-600">
+                    <span>{event.specialty}</span>
+                    <span className="font-mono font-semibold tracking-[0.18em] text-slate-900">
+                      PIN {event.pin}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <Link
+                    href={`/live/${event.pin}`}
+                    className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-arena-200 hover:text-arena-700"
+                  >
+                    Ver pantalla publica
+                  </Link>
+                  <Link
+                    href={`/host/event/${event.id}`}
+                    className="inline-flex items-center justify-center rounded-2xl bg-arena-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-arena-700"
+                  >
+                    Abrir control
+                  </Link>
+                </div>
+              </div>
+            </Panel>
+          ))
+        )}
+      </div>
     </PageShell>
   );
 }

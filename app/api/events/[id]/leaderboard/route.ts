@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { getHostSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { clearQuestionAutoClose } from "@/lib/question-timer";
 import { emitRealtimeEvent } from "@/lib/socket";
 import { EventStatus, getEventTransitionError } from "@/lib/state-machine";
 
@@ -9,8 +11,25 @@ type RouteContext = {
 };
 
 async function transitionEventStatus(eventId: string, nextStatus: EventStatus) {
-  const event = await db.event.findUnique({
-    where: { id: eventId },
+  const session = await getHostSession();
+
+  if (!session) {
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message: "Debes iniciar sesion para actualizar este evento."
+        },
+        { status: 401 }
+      )
+    };
+  }
+
+  const event = await db.event.findFirst({
+    where: {
+      id: eventId,
+      created_by: session.sub
+    },
     select: {
       id: true,
       pin: true,
@@ -48,7 +67,9 @@ async function transitionEventStatus(eventId: string, nextStatus: EventStatus) {
   const updatedEvent = await db.event.update({
     where: { id: event.id },
     data: {
-      status: nextStatus
+      status: nextStatus,
+      question_started_at: null,
+      question_closes_at: null
     },
     select: {
       id: true,
@@ -57,6 +78,8 @@ async function transitionEventStatus(eventId: string, nextStatus: EventStatus) {
       current_question_index: true
     }
   });
+
+  clearQuestionAutoClose(updatedEvent.id);
 
   return { event: updatedEvent };
 }
