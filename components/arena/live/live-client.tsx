@@ -69,6 +69,8 @@ export function LiveClient({ pin }: LiveClientProps) {
   const hasPlayedVictorySound = useRef(false);
   const isFinalResultsVisible =
     state?.event.status === "leaderboard" || state?.event.status === "finished";
+  const showInitialLoading = loading && !state;
+  const showBlockingError = !!error && !state;
 
   const { realtimeConnected } = usePublicEventState<LiveState>({
     pin,
@@ -130,26 +132,19 @@ export function LiveClient({ pin }: LiveClientProps) {
         ]}
       />
       <Panel>
-        <style>{`
-          @keyframes lobbyJoinFade {
-            from {
-              opacity: 0;
-              transform: translateY(8px) scale(0.96);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0) scale(1);
-            }
-          }
-        `}</style>
-        {loading ? (
+        {showInitialLoading ? (
           <p className="text-sm text-slate-600">Cargando pantalla publica...</p>
-        ) : error ? (
+        ) : showBlockingError ? (
           <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
           </p>
         ) : !state ? null : (
           <div className="space-y-8">
+            {error ? (
+              <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                {error}
+              </p>
+            ) : null}
             <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
               <div className="rounded-[2rem] bg-gradient-to-r from-arena-700 to-arena-500 p-8 text-white shadow-xl shadow-arena-200">
                 <p className="text-sm font-semibold uppercase tracking-[0.22em] text-white/70">
@@ -257,9 +252,6 @@ export function LiveClient({ pin }: LiveClientProps) {
                         <div
                           key={participant.id}
                           className="rounded-[1.6rem] border border-white/10 bg-white/5 p-4 shadow-[0_20px_45px_-30px_rgba(14,165,233,0.45)] transition-all duration-300"
-                          style={{
-                            animation: `lobbyJoinFade 280ms ease-out ${index * 60}ms both`
-                          }}
                         >
                           <div className="flex items-center gap-4">
                             <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-sky-200/20 bg-slate-900 shadow-[0_0_24px_rgba(56,189,248,0.18)] ring-4 ring-sky-300/10">

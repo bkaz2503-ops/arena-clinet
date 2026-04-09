@@ -16,6 +16,8 @@ type PublicState = {
     pin: string;
     status: string;
     current_question_index: number;
+    question_started_at: string | null;
+    question_closes_at: string | null;
   };
   leaderboard: Array<{
     display_name: string;
@@ -112,6 +114,8 @@ export function PlayClient({ pin }: PlayClientProps) {
   const hasPlayedVictorySound = useRef(false);
   const isFinalResultsVisible =
     state?.event.status === "leaderboard" || state?.event.status === "finished";
+  const showInitialLoading = loading && !state;
+  const showBlockingError = !!error && !state;
 
   const currentQuestion = state?.current_question ?? null;
   const canAnswer =
@@ -151,13 +155,29 @@ export function PlayClient({ pin }: PlayClientProps) {
       return;
     }
 
-    setQuestionStartedAt(Date.now());
+    const startedAtMs = state?.event.question_started_at
+      ? new Date(state.event.question_started_at).getTime()
+      : Date.now();
+    const closesAtMs = state?.event.question_closes_at
+      ? new Date(state.event.question_closes_at).getTime()
+      : startedAtMs + currentQuestion.time_limit_seconds * 1000;
+    const initialSecondsLeft = Math.max(
+      Math.ceil((closesAtMs - Date.now()) / 1000),
+      0
+    );
+
+    setQuestionStartedAt(startedAtMs);
     setAnsweredQuestionId(null);
     setAnswerResult(null);
     setPendingQuestionId(null);
     setSelectedOptionId(null);
-    setSecondsLeft(currentQuestion.time_limit_seconds);
-  }, [currentQuestion?.id, currentQuestion?.time_limit_seconds]);
+    setSecondsLeft(initialSecondsLeft);
+  }, [
+    currentQuestion?.id,
+    currentQuestion?.time_limit_seconds,
+    state?.event.question_closes_at,
+    state?.event.question_started_at
+  ]);
 
   useEffect(() => {
     if (
@@ -168,17 +188,22 @@ export function PlayClient({ pin }: PlayClientProps) {
       return;
     }
 
+    const closesAtMs = state.event.question_closes_at
+      ? new Date(state.event.question_closes_at).getTime()
+      : questionStartedAt + currentQuestion.time_limit_seconds * 1000;
+
     const interval = window.setInterval(() => {
-      const elapsedSeconds = Math.floor((Date.now() - questionStartedAt) / 1000);
-      const remaining = Math.max(
-        currentQuestion.time_limit_seconds - elapsedSeconds,
-        0
-      );
+      const remaining = Math.max(Math.ceil((closesAtMs - Date.now()) / 1000), 0);
       setSecondsLeft(remaining);
     }, 250);
 
     return () => window.clearInterval(interval);
-  }, [currentQuestion, questionStartedAt, state?.event.status]);
+  }, [
+    currentQuestion,
+    questionStartedAt,
+    state?.event.question_closes_at,
+    state?.event.status
+  ]);
 
   useEffect(() => {
     if (!isFinalResultsVisible) {
@@ -281,11 +306,11 @@ export function PlayClient({ pin }: PlayClientProps) {
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-slate-900 text-white">
       <div className="flex min-h-screen flex-col justify-between px-4 py-5 sm:px-6 sm:py-6">
-        {loading ? (
+        {showInitialLoading ? (
           <div className="flex min-h-screen items-center justify-center">
             <p className="text-sm text-slate-200">Cargando evento...</p>
           </div>
-        ) : error ? (
+        ) : showBlockingError ? (
           <div className="mx-auto flex min-h-screen w-full max-w-3xl items-center justify-center">
             <div className="w-full rounded-3xl border border-red-300/30 bg-red-500/10 px-5 py-4 text-sm text-red-100">
               {error}
@@ -314,6 +339,11 @@ export function PlayClient({ pin }: PlayClientProps) {
           </div>
         ) : (
           <>
+            {error ? (
+              <div className="mx-auto mb-4 w-full max-w-5xl rounded-2xl border border-amber-300/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+                {error}
+              </div>
+            ) : null}
             <header className="flex items-start justify-between gap-4">
               <div className="space-y-1">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">

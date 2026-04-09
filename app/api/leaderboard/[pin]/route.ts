@@ -21,7 +21,9 @@ export async function GET(_: Request, context: RouteContext) {
       title: true,
       pin: true,
       status: true,
-      current_question_index: true
+      current_question_index: true,
+      question_started_at: true,
+      question_closes_at: true
     }
   });
 
@@ -41,7 +43,9 @@ export async function GET(_: Request, context: RouteContext) {
     event = {
       ...event,
       status: autoClosedEvent.status,
-      current_question_index: autoClosedEvent.current_question_index
+      current_question_index: autoClosedEvent.current_question_index,
+      question_started_at: null,
+      question_closes_at: null
     };
   }
 
@@ -100,7 +104,12 @@ export async function GET(_: Request, context: RouteContext) {
   const publicCurrentQuestion = currentQuestion
     ? {
         ...currentQuestion,
-        options: currentQuestion.options.map((option) => ({
+        options: currentQuestion.options.map((option: {
+          id: string;
+          label: string;
+          text: string;
+          is_correct: boolean;
+        }) => ({
           id: option.id,
           label: option.label,
           text: option.text,
