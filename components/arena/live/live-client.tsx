@@ -84,7 +84,9 @@ export function LiveClient({ pin }: LiveClientProps) {
       return;
     }
 
-    setJoinUrl(`${window.location.origin}/join?pin=${encodeURIComponent(pin)}`);
+    const url = new URL("/join", window.location.origin);
+    url.searchParams.set("pin", pin);
+    setJoinUrl(url.toString());
   }, [pin]);
 
   useEffect(() => {
@@ -182,6 +184,14 @@ export function LiveClient({ pin }: LiveClientProps) {
                       <p className="text-2xl font-semibold tracking-[0.18em] text-arena-700">
                         {state.event.pin}
                       </p>
+                      <a
+                        href={joinUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block break-all text-xs text-slate-500 underline underline-offset-4"
+                      >
+                        {joinUrl}
+                      </a>
                     </div>
                   </div>
                 </div>
